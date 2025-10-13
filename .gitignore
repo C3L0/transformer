@@ -1,0 +1,51 @@
+# Build artifacts
+*.o
+*.obj
+*.so
+*.a
+*.out
+*.exe
+*.dll
+
+# Binary executables
+main
+a.out
+*.exe
+
+# Debug and profiling files
+*.dSYM/
+*.gcda
+*.gcno
+*.gcov
+*.gprof
+*.log
+
+# Compiled files
+*.class
+
+# Backup / swap files (Vim, Neovim, Emacs)
+*~
+*.swp
+*.swo
+*.swm
+*.tmp
+
+# Core dumps
+core
+core.*
+
+# CMake / Make build directories
+/build/
+bin/
+obj/
+dist/
+
+# Neovim state files
+.session
+nvim.log
+
+# If using Docker
+# *.tar
+# .docker/
+# docker-compose.override.yml
+
