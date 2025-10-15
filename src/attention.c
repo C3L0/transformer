@@ -1,20 +1,19 @@
 #include "attention.h"
 // gcc src/*.c -o app
-#include "math_utils.h"
+#include "utils.h"
 // gcc src/*.c -DUSE_OPENBLAS -lopenblas -o app
 
-#include <cblast.h>
-#include <math.h>
+#include <cblas.h>
 #include <stdlib.h>
 #include <string.h>
 
 void compute_attention_gemm(const float *X, const float *W_qkv, float *Q,
                             float *K, float *V, float *scores, float *weights,
                             float *out, int L, int d_model, int d_k) {
-  // Compute QKV = X × W_qkv   (L x d_model) * (d_model x 3d_model)
+  // Compute QKV
+  // = X × W_qkv   (L x d_model) * (d_model x 3d_model)
   float *QKV = calloc(L * 3 * d_model, sizeof(float));
-  matmul_blocked((float *)X, (float *)W_qkv, QKV,
-                 L); // uses your matrix multiply
+  matmul_blocked(X, W_qkv, QKV, L, 3 * d_model, d_model);
 
   // Split QKV into Q, K, V (L x d_k)
   for (int i = 0; i < L; i++) {
@@ -23,24 +22,30 @@ void compute_attention_gemm(const float *X, const float *W_qkv, float *Q,
     memcpy(V + i * d_k, QKV + i * 3 * d_k + 2 * d_k, sizeof(float) * d_k);
   }
 
-  // scores = Q × K^T → (L × d_k) * (d_k × L) = (L × L)
+  // Compute scores
+  // = Q × K^T : (L × d_k) * (d_k × L) = (L × L)
 #ifdef USE_OPENBLAS
   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, L, L, d_k, 1.0f, Q, d_k,
               K, d_k, 0.0f, scores, L);
 #else
-  // my math implementation
   float *K_T = calloc(L * d_k, sizeof(float));
   transpose_matrix(K, K_T, L, d_k);
-  matmul_blocked(Q, K_T, scores, L);
+  matmul_blocked(Q, K_T, scores, L, L, d_k);
   free(K_T);
 
 #endif
 
-  // (Optional later): apply scaling, softmax, and masking here
-  // For now, just copy scores into weights for next GEMM
+  scale_scores(scores, L, d_k);
+
+  // mask = //A REPRENDRE ICI
+  apply_mask(scores, mask, L);
+  softmax_rows(scores, weights, L);
+
+  // Copy scores in weights
   memcpy(weights, scores, sizeof(float) * L * L);
 
-  // out = weights × V  (L × L) * (L × d_k) = (L × d_k)
+  // Compute out
+  // = weights × V  (L × L) * (L × d_k) = (L × d_k)
 #ifdef USE_OPENBLAS
   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, L, d_k, L, 1.0f,
               weights, L, V, d_k, 0.0f, out, d_k);
