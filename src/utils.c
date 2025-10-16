@@ -21,6 +21,14 @@ int compare(float *C1, float *C2, int len) {
   return 1;
 }
 
+void mattri_low(float *A, int M) {
+  for (int i = 0; i < M; i++) {
+    for (int j = 0; j < M; j++) {
+      A[i * M + j] = (j <= i) ? 1.0 : 0.0;
+    }
+  }
+}
+
 #define BLOCK_SIZE 64 // depends on your CPU cache size
 
 void matmul_blocked(const float *A, const float *B, float *C, int M, int N,
@@ -61,11 +69,11 @@ void scale_scores(float *scores, int L, int d_k) {
     scores[i] *= scale;
 }
 
-void apply_mask(float *scores, const int *mask, int L) {
+void apply_mask(float *scores, const float *mask, int L) {
   if (!mask)
     return;
   for (int i = 0; i < L * L; i++)
-    if (mask[i] == 0)
+    if (mask[i] == 0.0)
       scores[i] = -INFINITY;
 }
 

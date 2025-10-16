@@ -8,9 +8,8 @@
 // gcc -Iinclude src/utils.c tests/utils_tests.c -o utils_tests -lopenblas -lm
 // -O2
 
-void matmul_blocked_test(void) {
+void test_matmul_blocked(void) {
   int N = 256; // test matrix size
-  printf("Testing matmul_blocked vs OpenBLAS SGEMM (N=%d): ", N);
 
   float *A = calloc(N * N, sizeof(float));
   float *B = calloc(N * N, sizeof(float));
@@ -27,10 +26,11 @@ void matmul_blocked_test(void) {
   // My implementation
   matmul_blocked(A, B, C_test, N, N, N); // need to be checked
 
+  printf("Testing matmul_blocked vs OpenBLAS SGEMM (N=%d):\n\t", N);
   if (compare(C_ref, C_test, N * N))
-    printf("PASSED — Results match!\n");
+    printf("PASSED\n");
   else
-    printf("FAILED — Results differ!\n");
+    printf("FAILED\n");
 
   free(A);
   free(B);
@@ -38,21 +38,20 @@ void matmul_blocked_test(void) {
   free(C_test);
 }
 
-void transpose_matrix_test(void) {
+void test_transpose_matrix(void) {
   int cols = 3, rows = 2;
 
-  float A[6] = {1, 2, 3, 4, 5, 6}; // 2x3
+  float A[6] = {1, 2, 3, 4, 5, 6};
   float A_T[6] = {0};
   float A_T_ref[6] = {1, 4, 2, 5, 3, 6};
 
-  // My implementation
   transpose_matrix(A, A_T, rows, cols);
 
-  printf("Testing transpose_matrix_test: ");
+  printf("Testing transpose_matrix_test:\n\t");
   if (compare(A_T_ref, A_T, cols * rows))
-    printf("PASSED — Results match!\n");
+    printf("PASSED\n");
   else
-    printf("FAILED — Results differ!\n");
+    printf("FAILED\n");
 }
 
 #define EPSILON 1e-5
@@ -60,7 +59,6 @@ void transpose_matrix_test(void) {
 static int float_equal(float a, float b) { return fabsf(a - b) < EPSILON; }
 
 static void test_scale_scores() {
-  printf("Testing test_scale_scores: ");
   float scores[4] = {1.0, 2.0, 3.0, 4.0};
   int L = 2, d_k = 4;
 
@@ -68,45 +66,30 @@ static void test_scale_scores() {
 
   scale_scores(scores, L, d_k);
 
-  float expected_scale = 1.0f / sqrtf(4.0f);
-  int pass = 1;
-  for (int i = 0; i < 4; i++) {
-    if (!float_equal(scores[i], (i + 1) * expected_scale)) {
-      printf("FAILED — Results differ!\n");
-      printf("scale_scores failed at index %d: got %f expected %f\n", i,
-             scores[i], (i + 1) * expected_scale);
-      pass = 0;
-    }
-  }
-  if (pass)
-    printf("PASSED — Results match!\n");
+  printf("Testing scale_scores:\n\t");
+  if (compare(scores, ref, 4))
+    printf("PASSED\n");
+  else
+    printf("FAILED\n");
 }
 
 static void test_apply_mask() {
-  printf("Testing test_apply_mask: ");
   float scores[4] = {1.0, 2.0, 3.0, 4.0};
-  int mask[4] = {1, 0, 1, 0};
+  float mask[4] = {1.0, 0.0, 1.0, 0.0};
   int L = 2;
+
+  float ref[4] = {1.0, -INFINITY, 3.0, -INFINITY};
 
   apply_mask(scores, mask, L);
 
-  int pass = 1;
-  for (int i = 0; i < 4; i++) {
-    if (mask[i] == 0) {
-      if (!isinf(scores[i])) {
-        printf("FAILED — Results differ!\n");
-        printf("apply_mask failed at index %d: expected -inf got %f\n", i,
-               scores[i]);
-        pass = 0;
-      }
-    }
-  }
-  if (pass)
-    printf("PASSED — Results match!\n");
+  printf("Testing apply_mask:\n\t");
+  if (compare(scores, ref, 4))
+    printf("PASSED\n");
+  else
+    printf("FAILED\n");
 }
 
 static void test_softmax_rows() {
-  printf("Testing test_softmax_rows: ");
 
   float scores[4] = {0.0, 1.0, 2.0, 3.0}; // 2x2
   float ref[4] = {0.26894143, 0.7310586, 0.26894143, 0.7310586};
@@ -115,27 +98,58 @@ static void test_softmax_rows() {
 
   softmax_rows(scores, weights, L);
 
-  int pass = 1;
-  for (int i = 0; i < 4; i++) {
-    if (!float_equal(weights[i], ref[i])) {
-      printf("FAILED — Results differ!\n");
-      printf("softmax_rows[%d]: got %f, expected %f\n", i, weights[i], ref[i]);
-      pass = 0;
-    }
-  }
-  if (pass)
-    printf("PASSED — Results match!\n");
+  printf("Testing softmax_rows:\n\t");
+  if (compare(weights, ref, 4))
+    printf("PASSED\n");
+  else
+    printf("FAILED\n");
+}
+
+static void test_mattri_low() {
+
+  float *M = malloc(9 * sizeof(float));
+  float M_ref[9] = {1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0};
+
+  mattri_low(M, 3);
+
+  printf("Testing mattri_low:\n\t");
+  if (compare(M, M_ref, 9))
+    printf("PASSED\n");
+  else
+    printf("FAILED\n");
+}
+
+static void test_masking() {
+  int L = 3;
+  float scores[9];
+  float mask[9];
+
+  for (int i = 0; i < 9; i++)
+    scores[i] = i;
+
+  float ref[9] = {0.0,       -INFINITY, -INFINITY, 3.0, 4.0,
+                  -INFINITY, 6.0,       7.0,       8.0};
+
+  mattri_low(mask, L);
+  apply_mask(scores, mask, L);
+
+  printf("Masked scores:\n\t");
+  if (compare(scores, ref, 9))
+    printf("PASSED\n");
+  else
+    printf("FAILED\n");
 }
 
 int main() {
-
   // return 0 & 1 for the tests
   printf("===== Running utils unit tests =====\n");
-  matmul_blocked_test();
-  transpose_matrix_test();
+  test_matmul_blocked();
+  test_transpose_matrix();
   test_scale_scores();
   test_apply_mask();
   test_softmax_rows();
+  test_mattri_low();
+  test_masking();
   printf("===== All tests complete =====\n");
   return 0;
 }
