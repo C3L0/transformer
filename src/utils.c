@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define EPSILON 1e-3
 
@@ -33,6 +34,8 @@ void mattri_low(float *A, int M) {
 
 void matmul_blocked(const float *A, const float *B, float *C, int M, int N,
                     int K) {
+
+  memset(C, 0, M * N * sizeof(float));
   // A: M×K,  B: K×N,  C: M×N
   for (int ii = 0; ii < M; ii += BLOCK_SIZE) {
     for (int jj = 0; jj < N; jj += BLOCK_SIZE) {

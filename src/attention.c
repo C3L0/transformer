@@ -10,10 +10,11 @@
 void compute_attention_gemm(const float *X, const float *W_qkv, float *Q,
                             float *K, float *V, float *scores, float *weights,
                             float *out, int L, int d_model, int d_k) {
+
   //--1-- Compute QKV
   // = X × W_qkv   (L x d_model) * (d_model x 3d_model)
-  float *QKV = calloc(L * 3 * d_model, sizeof(float));
-  matmul_blocked(X, W_qkv, QKV, L, 3 * d_model, d_model);
+  float *QKV = calloc(L * 3 * d_k, sizeof(float));
+  matmul_blocked(X, W_qkv, QKV, L, 3 * d_k, d_model);
 
   //--2-- Split QKV into Q, K, V (L x d_k)
   int stride = 3 * d_k;
