@@ -6,6 +6,8 @@
 #include <string.h>
 
 // gcc -Iinclude src/*.c tests/attention_tests.c -lm -O2 -o attention_test
+// gcc -Iinclude src/*.c tests/attention_tests.c -DUSE_OPENBLAS -lopenblas -lm
+// -O2 -o attention_test
 // ./attention_test
 
 // small helper to print
@@ -58,10 +60,44 @@ void test_attention_basic() {
   print_mat("out", out, L, d_k);
   return;
 }
+
+void test_multi_head_attention() {
+
+  int L = 2;         // sequence length
+  int d_model = 4;   // total embedding dim
+  int num_heads = 2; // 2 heads → each head has d_k = 2
+  int d_k = d_model / num_heads;
+
+  // Input X (L × d_model)
+  float X[8] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8};
+
+  // W_qkv (num_heads × 3 × d_model × d_k)
+  // For simplicity, fill with small sequential numbers
+  float W_qkv[num_heads * 3 * d_model * d_k];
+  for (int i = 0; i < num_heads * 3 * d_model * d_k; i++) {
+    W_qkv[i] = 0.01f * (i + 1);
+  }
+
+  // W_o (d_model × d_model)
+  float W_o[16];
+  for (int i = 0; i < 16; i++)
+    W_o[i] = 0.02f * (i + 1);
+
+  float *out = calloc(L * d_model, sizeof(float));
+
+  // Run multi-head attention
+  compute_multihead_attention(X, W_qkv, W_o, out, L, d_model, num_heads);
+
+  // print results
+  print_mat("out", out, L, d_model);
+  return;
+}
+
 int main() {
   // return 0 & 1 for the tests
   printf("===== Running utils unit tests =====\n");
   test_attention_basic();
+  test_multi_head_attention();
   printf("===== All tests complete =====\n");
   return 0;
 }
