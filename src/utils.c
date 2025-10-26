@@ -97,3 +97,19 @@ void softmax_rows(const float *scores, float *weights, int L) {
       weights[i * L + j] /= sum;
   }
 }
+
+void matrix_add_vector_bias(float *matrix, const float *bias, int M, int N) {
+  for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N; j++) {
+      matrix[i * N + j] += bias[j];
+    }
+  }
+}
+
+void apply_gelu(float *M, int rows, int cols) {
+  int size = rows * cols;
+
+  for (int i = 0; i < size; i++)
+    M[i] = 0.5f * M[i] *
+           (1.0f + tanhf(SQRT_2_OVER_PI * (M[i] + GELU_A * powf(M[i], 3))));
+}

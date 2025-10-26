@@ -26,6 +26,13 @@ void compute_attention_gemm(const float *X, const float *W_qkv, float *Q,
 
   //--3-- Compute scores
   // = Q × K^T : (L × d_k) * (d_k × L) = (L × L)
+  //
+  //
+  //
+  //
+  // why no transpose in the useopenblas
+  //
+  //
 #ifdef USE_OPENBLAS
   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, L, L, d_k, 1.0f, Q, d_k,
               K, d_k, 0.0f, scores, L);

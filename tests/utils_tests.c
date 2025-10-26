@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // gcc -Iinclude src/utils.c tests/utils_tests.c -o utils_tests -lopenblas -lm
 // -O2
@@ -140,6 +141,41 @@ static void test_masking() {
     printf("FAILED\n");
 }
 
+static void test_matrix_add_vector_bias() {
+
+  float input_matrix[12] = {1.0f, 2.0f, 3.0f, 4.0f,  5.0f,  6.0f,
+                            7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f};
+
+  float *M_test = malloc(12 * sizeof(float));
+  memcpy(M_test, input_matrix, 12 * sizeof(float));
+
+  float bias_vector[4] = {10.0f, 20.0f, 30.0f, 40.0f};
+
+  float M_ref[12] = {11.0f, 22.0f, 33.0f, 44.0f, 15.0f, 26.0f,
+                     37.0f, 48.0f, 19.0f, 30.0f, 41.0f, 52.0f};
+
+  //  matrix_add_vector_bias(M_test, bias_vector, 3, 4);
+  matrix_add_vector_bias(M_test, bias_vector, 3, 4);
+
+  printf("Testing matrix_add_vector_bias:\n\t");
+  if (compare(M_test, M_ref, 12)) {
+    printf("PASSED\n");
+  } else {
+    printf("FAILED\n");
+  }
+
+  free(M_test);
+}
+
+static void test_apply_gelu() { // need to be check a better way but with python
+                                // the result is good
+  float arr[3] = {-1.0f, 0.0f, 1.0f};
+  apply_gelu(arr, 1, 3);
+  for (int i = 0; i < 3; i++) {
+    printf("%f\n", arr[i]);
+  }
+}
+
 int main() {
   // return 0 & 1 for the tests
   printf("===== Running utils unit tests =====\n");
@@ -150,6 +186,8 @@ int main() {
   test_softmax_rows();
   test_mattri_low();
   test_masking();
+  test_matrix_add_vector_bias();
+  test_apply_gelu();
   printf("===== All tests complete =====\n");
   return 0;
 }
