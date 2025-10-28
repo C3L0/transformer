@@ -169,10 +169,16 @@ static void test_matrix_add_vector_bias() {
 
 static void test_apply_gelu() { // need to be check a better way but with python
                                 // the result is good
-  float arr[3] = {-1.0f, 0.0f, 1.0f};
-  apply_gelu(arr, 1, 3);
-  for (int i = 0; i < 3; i++) {
-    printf("%f\n", arr[i]);
+  float mat[3] = {-1.0f, 0.0f, 1.0f};
+  apply_gelu(mat, 1, 3);
+  // result from a python script
+  float mat_ref[3] = {-0.1588f, 0.0f, 0.8412};
+
+  printf("Testing matrix_add_vector_bias:\n\t");
+  if (compare(mat, mat_ref, 3)) {
+    printf("PASSED\n");
+  } else {
+    printf("FAILED\n");
   }
 }
 

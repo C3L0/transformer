@@ -16,7 +16,7 @@ typedef struct {
   float *B2;
 } FeedForwardParams;
 
-void compute_feedForward_network(const float *input,
+void compute_feedforward_network(const float *input,
                                  const FeedForwardParams *params, float *output,
                                  int L, int d_model, int d_ff);
 
