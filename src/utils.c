@@ -113,3 +113,38 @@ void apply_gelu(float *M, int rows, int cols) {
     M[i] = 0.5f * M[i] *
            (1.0f + tanhf(SQRT_2_OVER_PI * (M[i] + GELU_A * powf(M[i], 3))));
 }
+
+// void compute_mean(float *M, int size, float *mean) {}
+
+// void compute_variance(float *M, int size, float *var) {}
+
+void compute_mean_variance(const float *M, int size, float *mean_out,
+                           float *var_out) {
+  if (size == 0) {
+    *mean_out = 0.0f;
+    *var_out = 0.0f;
+    return;
+  }
+
+  float sum = 0.0f;
+  for (int i = 0; i < size; i++) {
+    sum += M[i];
+  }
+  float mean = sum / (float)size;
+
+  float sum_sq_diff = 0.0f;
+  for (int i = 0; i < size; i++) {
+    float diff = M[i] - mean;
+    sum_sq_diff += diff * diff;
+  }
+
+  float variance = sum_sq_diff / (float)size;
+
+  *mean_out = mean;
+  *var_out = variance;
+  if (variance == 0) {
+    // Add a epsilon to the variance to prevent division by zero in layernorm.c
+    const float LN_EPSILON = 1e-5f;
+    *var_out = variance + LN_EPSILON;
+  }
+}

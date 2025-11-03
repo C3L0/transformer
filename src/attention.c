@@ -67,29 +67,34 @@ void compute_attention_gemm(const float *X, const float *W_qkv, float *Q,
   free(QKV);
 }
 
-void compute_multihead_attention(const float *X, const float *W_qkv,
-                                 const float *W_o, float *out, int L,
-                                 int d_model, int num_heads) {
-  //--1-- Split embedding into heads
+void compute_multihead_attention(const float *X, const AttentionParams *params,
+                                 float *out, int L, int d_model,
+                                 int num_heads) {
+
+  // -- 1 -- Calculate dimensions
   int d_k = d_model / num_heads;
 
-  //--2-- Allocate buffer for all heads' outputs
+  // -- 2 -- Allocate buffer for all heads' outputs (will be concatenated)
   float *all_heads = calloc(L * d_model, sizeof(float));
 
   // Loop over each head
   for (int h = 0; h < num_heads; h++) {
-    const float *W_head = W_qkv + h * 3 * d_model * d_k;
+    // Pointer to the specific weight slice for this head: W_qkv_head (d_model x
+    // 3d_k) W_qkv is flat (d_model x 3d_model), so we step by 3*d_model*d_k
+    // elements
+    const float *W_head = params->W_qkv + h * 3 * d_model * d_k;
 
-    //--5-- Concatenate all heads' outputs
+    // Output buffer for this head (L x d_k)
     float *head_out = all_heads + h * L * d_k;
 
+    // Temporary buffers for single-head computation
     float *Q = calloc(L * d_k, sizeof(float));
     float *K = calloc(L * d_k, sizeof(float));
     float *V = calloc(L * d_k, sizeof(float));
     float *scores = calloc(L * L, sizeof(float));
     float *weights = calloc(L * L, sizeof(float));
 
-    //--3-- Compute single-head attention num_heads times
+    // -- 3 -- Compute single-head attention
     compute_attention_gemm(X, W_head, Q, K, V, scores, weights, head_out, L,
                            d_model, d_k);
 
@@ -100,13 +105,17 @@ void compute_multihead_attention(const float *X, const float *W_qkv,
     free(weights);
   }
 
-// Apply the final output projection
+  // -- 4 -- Concatenation is implicit in how 'all_heads' buffer was populated
+
+  // -- 5 -- Apply the final output projection
+  // = all_heads × W_o (L x d_model) * (d_model x d_model) = (L x d_model)
 #ifdef USE_OPENBLAS
   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, L, d_model, d_model,
-              1.0f, all_heads, d_model, W_o, d_model, 0.0f, out, d_model);
+              1.0f, all_heads, d_model, params->W_o, d_model, 0.0f, out,
+              d_model);
 #else
-  matmul_blocked(all_heads, W_o, out, L, d_model, d_model);
-
+  matmul_blocked(all_heads, params->W_o, out, L, d_model, d_model);
 #endif
+
   free(all_heads);
 }

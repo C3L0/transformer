@@ -182,6 +182,25 @@ static void test_apply_gelu() { // need to be check a better way but with python
   }
 }
 
+static void test_mean_variance() {
+
+  float mat[5] = {0.0, 1.0, 2.0, 3.0, 4.0};
+  float mean = 0.0;
+  float var = 0.0;
+
+  float mean_ref = 2.0;
+  float var_ref = 2.0;
+
+  compute_mean_variance(mat, 5, &mean, &var);
+
+  printf("Testing mean and variance calculation:\n\t");
+  if (fabsf(mean - mean_ref) < EPSILON && fabsf(var - var_ref) < EPSILON) {
+    printf("PASSED\n");
+  } else {
+    printf("FAILED\n");
+  }
+}
+
 int main() {
   // return 0 & 1 for the tests
   printf("===== Running utils unit tests =====\n");
@@ -194,6 +213,7 @@ int main() {
   test_masking();
   test_matrix_add_vector_bias();
   test_apply_gelu();
+  test_mean_variance();
   printf("===== All tests complete =====\n");
   return 0;
 }

@@ -12,6 +12,8 @@ void matrix_add_vector_bias(float *matrix, const float *bias, int M, int N);
 void scale_scores(float *scores, int L, int d_k);
 void apply_mask(float *scores, const float *mask, int L);
 void softmax_rows(const float *scores, float *weights, int L);
+void compute_mean_variance(const float *M, int size, float *mean_out,
+                           float *var_out);
 
 #define GELU_A 0.044715f
 #define SQRT_2_OVER_PI 0.7978845608f // sqrt(2/pi)
