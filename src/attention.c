@@ -79,14 +79,16 @@ void compute_multihead_attention(const float *X, const AttentionParams *params,
 
   // Loop over each head
   for (int h = 0; h < num_heads; h++) {
-    // Pointer to the specific weight slice for this head: W_qkv_head (d_model x
-    // 3d_k) W_qkv is flat (d_model x 3d_model), so we step by 3*d_model*d_k
-    // elements
-    const float *W_head = params->W_qkv + h * 3 * d_model * d_k;
+    float *W_head = calloc(d_model * 3 * d_k, sizeof(float));
 
-    // Output buffer for this head (L x d_k)
+    // Copy the (3*d_k) columns for this head
+    for (int i = 0; i < d_model; i++) {
+      memcpy(W_head + i * (3 * d_k),
+             params->W_qkv + i * (3 * d_model) + h * (3 * d_k),
+             (3 * d_k) * sizeof(float));
+    }
+
     float *head_out = all_heads + h * L * d_k;
-
     // Temporary buffers for single-head computation
     float *Q = calloc(L * d_k, sizeof(float));
     float *K = calloc(L * d_k, sizeof(float));
@@ -98,6 +100,7 @@ void compute_multihead_attention(const float *X, const AttentionParams *params,
     compute_attention_gemm(X, W_head, Q, K, V, scores, weights, head_out, L,
                            d_model, d_k);
 
+    free(W_head);
     free(Q);
     free(K);
     free(V);
