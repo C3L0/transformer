@@ -1,11 +1,25 @@
 #include "../include/attention.h"
-// gcc src/*.c -o app
-#include "../include/utils.h"
-// gcc src/*.c -DUSE_OPENBLAS -lopenblas -o app
+#include "../include/math_utils.h"
+#include "../include/tensor.h"
 
 #include <cblas.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
+
+void scale_scores(float *scores, int L, int d_k) {
+  float scale = 1.0f / sqrtf((float)d_k);
+  for (int i = 0; i < L * L; i++)
+    scores[i] *= scale;
+}
+
+void apply_mask(float *scores, const float *mask, int L) {
+  if (!mask)
+    return;
+  for (int i = 0; i < L * L; i++)
+    if (mask[i] == 0.0)
+      scores[i] = -INFINITY;
+}
 
 void compute_attention_gemm(const float *X, const float *W_qkv, float *Q,
                             float *K, float *V, float *scores, float *weights,

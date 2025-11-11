@@ -3,8 +3,7 @@
 
 #include <stdio.h>
 
-// gcc -Iinclude src/layernorm.c src/utils.c tests/layernorm_tests.c -o
-// layernorm_tests -lm
+// gcc -Iinclude src/*.c tests/layernorm_tests.c -o layernorm_tests -lm
 
 static void test_full_layernorm() {
   int L = 1;

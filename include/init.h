@@ -6,6 +6,8 @@
 #include "feedforward.h"
 #include "layernorm.h"
 
+void fill_random(float *M, int N);
+
 void init_attention_params(AttentionParams *params, int d_model, int num_heads,
                            int random_init);
 

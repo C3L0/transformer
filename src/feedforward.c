@@ -1,4 +1,6 @@
 #include "../include/feedforward.h"
+#include "../include/math_utils.h"
+#include "../include/tensor.h"
 #include "../include/utils.h"
 
 #include <stdlib.h>

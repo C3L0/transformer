@@ -1,4 +1,5 @@
 #include "../include/layernorm.h"
+#include "../include/math_utils.h"
 #include "../include/utils.h"
 
 #include <math.h>

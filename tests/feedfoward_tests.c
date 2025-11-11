@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// gcc -Iinclude src/*.c tests/feedfoward_tests.c -lm -O2 -o feedforward_test
+
 /// NOTE improve the precision for the entire code maybe work on the type
 ///  int->size_t or float->double
 static void test_compute_feedforward_network() {

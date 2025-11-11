@@ -2,15 +2,8 @@
 
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #define EPSILON 1e-3
-
-void fill_random(float *M, int N) {
-  for (int i = 0; i < N * N; i++)
-    M[i] = (float)rand() / RAND_MAX;
-}
 
 int compare(float *C1, float *C2, int len) {
   for (int i = 0; i < len; i++) {
@@ -22,129 +15,12 @@ int compare(float *C1, float *C2, int len) {
   return 1;
 }
 
-void mattri_low(float *A, int M) {
-  for (int i = 0; i < M; i++) {
-    for (int j = 0; j < M; j++) {
-      A[i * M + j] = (j <= i) ? 1.0 : 0.0;
-    }
+void print_mat(const char *name, const float *arr, int size, int max_print) {
+  printf("%s (size=%d): ", name, size);
+  for (int i = 0; i < size && i < max_print; i++) {
+    printf("%.4f ", arr[i]);
   }
-}
-
-#define BLOCK_SIZE 64 // depends on your CPU cache size
-
-void matmul_blocked(const float *A, const float *B, float *C, int M, int N,
-                    int K) {
-
-  memset(C, 0, M * N * sizeof(float));
-  // A: M×K,  B: K×N,  C: M×N
-  for (int ii = 0; ii < M; ii += BLOCK_SIZE) {
-    for (int jj = 0; jj < N; jj += BLOCK_SIZE) {
-      for (int kk = 0; kk < K; kk += BLOCK_SIZE) {
-
-        int i_max = (ii + BLOCK_SIZE > M) ? M : ii + BLOCK_SIZE;
-        int j_max = (jj + BLOCK_SIZE > N) ? N : jj + BLOCK_SIZE;
-        int k_max = (kk + BLOCK_SIZE > K) ? K : kk + BLOCK_SIZE;
-
-        for (int i = ii; i < i_max; i++) {
-          for (int k = kk; k < k_max; k++) {
-            float a_ik = A[i * K + k];
-            for (int j = jj; j < j_max; j++) {
-              C[i * N + j] += a_ik * B[k * N + j];
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-void transpose_matrix(const float *src, float *dst, int rows, int cols) {
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++) {
-      dst[j * rows + i] = src[i * cols + j];
-    }
-  }
-}
-
-void scale_scores(float *scores, int L, int d_k) {
-  float scale = 1.0f / sqrtf((float)d_k);
-  for (int i = 0; i < L * L; i++)
-    scores[i] *= scale;
-}
-
-void apply_mask(float *scores, const float *mask, int L) {
-  if (!mask)
-    return;
-  for (int i = 0; i < L * L; i++)
-    if (mask[i] == 0.0)
-      scores[i] = -INFINITY;
-}
-
-void softmax_rows(const float *scores, float *weights, int L) {
-  for (int i = 0; i < L; i++) {
-    float max_val = -INFINITY, sum = 0.0f;
-    for (int j = 0; j < L; j++) {
-      float val = scores[i * L + j];
-      if (val > max_val)
-        max_val = val;
-    }
-    for (int j = 0; j < L; j++) {
-      float e = expf(scores[i * L + j] - max_val);
-      weights[i * L + j] = e;
-      sum += e;
-    }
-    for (int j = 0; j < L; j++)
-      weights[i * L + j] /= sum;
-  }
-}
-
-void matrix_add_vector_bias(float *matrix, const float *bias, int M, int N) {
-  for (int i = 0; i < M; i++) {
-    for (int j = 0; j < N; j++) {
-      matrix[i * N + j] += bias[j];
-    }
-  }
-}
-
-void apply_gelu(float *M, int rows, int cols) {
-  int size = rows * cols;
-
-  for (int i = 0; i < size; i++)
-    M[i] = 0.5f * M[i] *
-           (1.0f + tanhf(SQRT_2_OVER_PI * (M[i] + GELU_A * powf(M[i], 3))));
-}
-
-// void compute_mean(float *M, int size, float *mean) {}
-
-// void compute_variance(float *M, int size, float *var) {}
-
-void compute_mean_variance(const float *M, int size, float *mean_out,
-                           float *var_out) {
-  if (size == 0) {
-    *mean_out = 0.0f;
-    *var_out = 0.0f;
-    return;
-  }
-
-  float sum = 0.0f;
-  for (int i = 0; i < size; i++) {
-    sum += M[i];
-  }
-  float mean = sum / (float)size;
-
-  float sum_sq_diff = 0.0f;
-  for (int i = 0; i < size; i++) {
-    float diff = M[i] - mean;
-    sum_sq_diff += diff * diff;
-  }
-
-  float variance = sum_sq_diff / (float)size;
-
-  *mean_out = mean;
-  *var_out = variance;
-  if (variance == 0) {
-    // Add a epsilon to the variance to prevent division by zero in layernorm.c
-    const float LN_EPSILON = 1e-5f;
-    *var_out = variance + LN_EPSILON;
-  }
+  if (size > max_print)
+    printf("...");
+  printf("\n");
 }

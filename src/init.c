@@ -7,6 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+void fill_random(float *M, int N) {
+  for (int i = 0; i < N * N; i++)
+    M[i] = (float)rand() / RAND_MAX;
+}
+
 // AttentionParams
 void init_attention_params(AttentionParams *params, int d_model, int num_heads,
                            int random_init) {

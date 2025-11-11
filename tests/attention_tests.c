@@ -1,24 +1,45 @@
 #include "../include/attention.h"
+#include "../include/math_utils.h"
 #include "../include/utils.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // gcc -Iinclude src/*.c tests/attention_tests.c -lm -O2 -o attention_test
-// gcc -Iinclude src/*.c tests/attention_tests.c -DUSE_OPENBLAS -lopenblas -lm
-// -O2 -o attention_test
-// ./attention_test
+// gcc -Iinclude src/*.c tests/attention_tests.c -lopenblas -lm -O2 -o
+// attention_test
 
-// small helper to print
-static void print_mat(const char *name, const float *A, int R, int C) {
-  printf("%s (%dx%d):\n", name, R, C);
-  for (int i = 0; i < R; ++i) {
-    for (int j = 0; j < C; ++j) {
-      printf("%8.4f ", A[i * C + j]);
-    }
-    printf("\n");
-  }
+static void test_scale_scores() {
+  float scores[4] = {1.0, 2.0, 3.0, 4.0};
+  int L = 2, d_k = 4;
+
+  float ref[4] = {0.5, 1.0, 1.5, 2.0};
+
+  scale_scores(scores, L, d_k);
+
+  printf("Testing scale_scores:\n\t");
+  if (compare(scores, ref, 4))
+    printf("PASSED\n");
+  else
+    printf("FAILED\n");
+}
+
+static void test_apply_mask() {
+  float scores[4] = {1.0, 2.0, 3.0, 4.0};
+  float mask[4] = {1.0, 0.0, 1.0, 0.0};
+  int L = 2;
+
+  float ref[4] = {1.0, -INFINITY, 3.0, -INFINITY};
+
+  apply_mask(scores, mask, L);
+
+  printf("Testing apply_mask:\n\t");
+  if (compare(scores, ref, 4))
+    printf("PASSED\n");
+  else
+    printf("FAILED\n");
 }
 
 void test_attention_basic() {
@@ -64,9 +85,6 @@ void test_attention_basic() {
 
 // Define a small tolerance for floating-point comparisons (local if not in
 // utils.h)
-#ifndef EPSILON
-#define EPSILON 1e-5f
-#endif
 
 // --- Test Helper: Parameter Initialization ---
 
@@ -154,9 +172,6 @@ static void test_multihead_attention() {
   compute_multihead_attention(X, &params, output, L, D_MODEL, NUM_HEADS);
 
   // 5. Verification
-  printf("\tChecking final output projection:\n");
-  // Using a slightly larger tolerance (1e-4) due to multiple floating point
-  // operations
   if (compare(output, expected_output, TOTAL_SIZE)) {
     printf("\tPASSED\n");
   } else {
@@ -182,6 +197,8 @@ static void test_multihead_attention() {
 int main() {
   // return 0 & 1 for the tests
   printf("===== Running utils unit tests =====\n");
+  test_scale_scores();
+  test_apply_mask();
   test_attention_basic();
   test_multihead_attention();
   printf("===== All tests complete =====\n");
