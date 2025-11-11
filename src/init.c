@@ -1,9 +1,5 @@
 #include "../include/init.h"
 
-#include "../include/attention.h"
-#include "../include/feedforward.h"
-#include "../include/layernorm.h"
-
 #include "../include/utils.h"
 
 #include <math.h>
@@ -31,9 +27,7 @@ void init_attention_params(AttentionParams *params, int d_model, int num_heads,
 
   if (!params->W_qkv || !params->W_o) {
     fprintf(stderr, "Error: failed to allocate W_qkv or W_o\n");
-    free(params->W_qkv);
-    free(params->W_o);
-    free(params);
+    free_attention_params(params);
     exit(1);
   }
 
@@ -50,11 +44,12 @@ void init_attention_params(AttentionParams *params, int d_model, int num_heads,
 }
 
 void free_attention_params(AttentionParams *params) {
-  if (params) {
-    free(params->W_qkv);
-    free(params->W_o);
-    free(params);
-  }
+  if (!params)
+    return;
+  free(params->W_qkv);
+  free(params->W_o);
+  params->W_qkv = NULL;
+  params->W_o = NULL;
 }
 
 // LayerNorm
@@ -69,8 +64,7 @@ void init_layernorm_params(LayerNormParams *params, int d_model) {
 
   if (!params->gamma || !params->beta) {
     fprintf(stderr, "Memory allocation failed for LayerNormParams.\n");
-    free(params->gamma);
-    free(params->beta);
+    free_layernorm_params(params);
     exit(1);
   }
 
@@ -91,6 +85,39 @@ void free_layernorm_params(LayerNormParams *params) {
   params->beta = NULL;
 }
 
-void init_feedforward_params() {}
+void init_feedforward_params(FeedForwardParams *params, int d_model, int d_ff) {
+  if (!params) {
+    fprintf(stderr, "Error: NULL pointer passed in init_feedforward_params\n");
+    exit(1);
+  }
 
-void free_feedforward_params(FeedForwardParams *params) {}
+  params->W1 = (float *)malloc(d_model * d_ff * sizeof(float));
+  params->B1 = (float *)calloc(d_ff, sizeof(float));
+  params->W2 = (float *)malloc(d_ff * d_model * sizeof(float));
+  params->B2 = (float *)calloc(d_model, sizeof(float));
+
+  if (!params->W1 || !params->W2 || !params->B1 || !params->B2) {
+    fprintf(stderr, "Memory allocation failed for FeedForwardParams");
+    free_feedforward_params(params);
+    exit(1);
+  }
+
+  float limit = sqrtf(6.0f / (d_model + d_ff));
+
+  // Xavier G(lorot Initialization
+  for (int i = 0; i < d_model * d_ff; i++)
+    params->W1[i] = ((float)rand() / RAND_MAX * 2.0f - 1.0f) * limit;
+
+  for (int i = 0; i < d_ff * d_model; i++)
+    params->W2[i] = ((float)rand() / RAND_MAX * 2.0f - 1.0f) * limit;
+}
+
+void free_feedforward_params(FeedForwardParams *params) {
+  if (!params)
+    return;
+  free(params->W1);
+  free(params->B1);
+  free(params->W2);
+  free(params->B2);
+  params->W1 = params->W2 = params->B1 = params->B2 = NULL;
+}

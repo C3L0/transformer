@@ -1,4 +1,7 @@
 // parameter initialization
+#ifndef INIT_H
+#define INIT_H
+
 #include "attention.h"
 #include "feedforward.h"
 #include "layernorm.h"
@@ -12,6 +15,8 @@ void init_layernorm_params(LayerNormParams *params, int d_model);
 
 void free_layernorm_params(LayerNormParams *params);
 
-void init_feedforward_params();
+void init_feedforward_params(FeedForwardParams *params, int d_model, int d_ff);
 
 void free_feedforward_params(FeedForwardParams *params);
+
+#endif
