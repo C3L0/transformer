@@ -1,7 +1,5 @@
 #include "../include/init.h"
 
-#include "../include/utils.h"
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,7 +78,6 @@ void init_layernorm_params(LayerNormParams *params, int d_model) {
   }
 }
 
-// Free LayerNorm parameters
 void free_layernorm_params(LayerNormParams *params) {
   if (!params)
     return;
@@ -90,6 +87,7 @@ void free_layernorm_params(LayerNormParams *params) {
   params->beta = NULL;
 }
 
+// FeedForward
 void init_feedforward_params(FeedForwardParams *params, int d_model, int d_ff) {
   if (!params) {
     fprintf(stderr, "Error: NULL pointer passed in init_feedforward_params\n");
@@ -125,4 +123,34 @@ void free_feedforward_params(FeedForwardParams *params) {
   free(params->W2);
   free(params->B2);
   params->W1 = params->W2 = params->B1 = params->B2 = NULL;
+}
+
+void init_encoder_params(EncoderParams *params, int d_model, int d_ff,
+                         int num_heads, int random_init) {
+  if (!params) {
+    fprintf(stderr, "Error: NULL pointer passed in init_feedforward_params\n");
+    exit(1);
+  }
+
+  init_attention_params(&(params->attn_params), d_model, num_heads,
+                        random_init);
+  init_layernorm_params(&(params->ln1_params), d_model);
+  init_feedforward_params(&(params->ffn_params), d_model, d_ff);
+  init_layernorm_params(&(params->ln2_params), d_model);
+
+  if (!&(params->attn_params) || !&(params->ln1_params) ||
+      !&(params->ffn_params) || !&(params->ln2_params)) {
+    fprintf(stderr, "Memory allocation failed for EncoderParams");
+    free_encoder_params(params);
+    exit(1);
+  }
+}
+
+void free_encoder_params(EncoderParams *params) {
+  if (!params)
+    return;
+  free(&(params->attn_params));
+  free(&(params->ln1_params));
+  free(&(params->ffn_params));
+  free(&(params->ln2_params));
 }

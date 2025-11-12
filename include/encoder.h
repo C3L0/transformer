@@ -17,9 +17,9 @@ typedef struct {
   FeedForwardParams ffn_params;
   // Second Layer Norm
   LayerNormParams ln2_params;
-} EncoderLayerParams;
+} EncoderParams;
 
-void compute_encoder_layer(const float *X, const EncoderLayerParams *params,
+void compute_encoder_layer(const float *X, const EncoderParams *params,
                            float *out, int L, int d_model, int d_ff,
                            int num_heads);
 

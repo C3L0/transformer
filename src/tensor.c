@@ -2,6 +2,11 @@
 
 #include <string.h>
 
+void matsum(const float *A, const float *B, float *C, int M) {
+  for (int i = 0; i < M; i++)
+    C[i] = A[i] + B[i];
+}
+
 void mattri_low(float *A, int M) {
   for (int i = 0; i < M; i++) {
     for (int j = 0; j < M; j++) {

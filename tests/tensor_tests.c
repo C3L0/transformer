@@ -9,6 +9,22 @@
 // gcc -Iinclude src/tensor.c src/utils.c src/init.c tests/tensor_tests.c -o
 // tensor_tests -lopenblas -lm -O2
 
+static void test_matsum() {
+  float A[3] = {1.0f, 2.0f, 1.0f};
+  float B[3] = {2.0f, 1.0f, 2.0f};
+  float *sum = calloc(3, sizeof(float));
+
+  float ref[3] = {3.0f, 3.0f, 3.0f};
+
+  matsum(A, B, sum, 3);
+
+  printf("Test matsum:\n\t");
+  if (compare(sum, ref, 3))
+    printf("PASSED\n");
+  else
+    printf("FAILED\n");
+}
+
 static void test_matmul_blocked(void) {
   int N = 256; // test matrix size
 
@@ -98,6 +114,7 @@ static void test_matrix_add_vector_bias() {
 int main() {
   // return 0 & 1 for the tests
   printf("===== Running utils unit tests =====\n");
+  test_matsum();
   test_matmul_blocked();
   test_transpose_matrix();
   test_mattri_low();

@@ -38,6 +38,15 @@ int main() {
   free_feedforward_params(&ff);
   printf("FeedForwardParams test complete\n\n");
 
+  // --- EncoderParams Test ---
+  printf("Testing EncoderParams initialization\n");
+  EncoderParams encode;
+  init_encoder_params(&encode, 4, 8, 2, 1);
+  // print_mat("AttentionParams", encode. , , );
+  // print_mat("LayerNormParams", encode. , , );
+  // print_mat("", encode. , , );
+  // print_mat("", encode. , , );
+  free_encoder_params(&encode);
   printf("===== All initialization tests passed. =====\n");
   return 0;
 }
