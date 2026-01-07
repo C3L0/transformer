@@ -18,4 +18,8 @@ void compute_attention_gemm(const float *X, const float *W_qkv, float *Q,
 void compute_multihead_attention(const float *X, const AttentionParams *params,
                                  float *out, int L, int d_model, int num_heads);
 
+void compute_cross_attention(const float *X_q, const float *X_kv,
+                             const AttentionParams *params, float *out,
+                             int L_dec, int L_enc, int d_model, int num_heads)
+
 #endif

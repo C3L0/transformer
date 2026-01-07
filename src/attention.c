@@ -136,3 +136,95 @@ void compute_multihead_attention(const float *X, const AttentionParams *params,
 
   free(all_heads);
 }
+
+void compute_cross_attention(const float *X_q, const float *X_kv,
+                             const AttentionParams *params, float *out,
+                             int L_dec, int L_enc, int d_model, int num_heads) {
+
+  int d_k = d_model / num_heads;
+
+  // Output buffer for all heads
+  float *all_heads = calloc(L_dec * d_model, sizeof(float));
+  if (!all_heads)
+    return; // Error handling
+
+  // Loop over heads
+  for (int h = 0; h < num_heads; h++) {
+    // Calculate offsets into the W_qkv matrix for this head
+    // The full matrix W_qkv has width (3 * d_model).
+    // Head h uses a slice of width (3 * d_k).
+
+    // However, we need to access W_Q, W_K, and W_V separately.
+    // Conceptually, for head 'h', the weights are at:
+    // W_qkv start ptr + (h * 3 * d_model * d_k) (based on your previous logic)
+
+    const float *W_head_start = params->W_qkv + (h * 3 * d_model * d_k);
+
+    // Pointers to the sub-matrices within this head's block
+    // Each sub-matrix is (d_model x d_k)
+    const float *W_Q_head = W_head_start;                       // 1st part
+    const float *W_K_head = W_head_start + (d_model * d_k);     // 2nd part
+    const float *W_V_head = W_head_start + (2 * d_model * d_k); // 3rd part
+
+    // --- 1. Compute Q, K, V ---
+    float *Q = calloc(L_dec * d_k, sizeof(float));
+    float *K = calloc(L_enc * d_k, sizeof(float));
+    float *V = calloc(L_enc * d_k, sizeof(float));
+
+    // Q = X_q * W_Q
+    matmul_blocked(X_q, W_Q_head, Q, L_dec, d_k, d_model);
+
+    // K = X_kv * W_K
+    matmul_blocked(X_kv, W_K_head, K, L_enc, d_k, d_model);
+
+    // V = X_kv * W_V
+    matmul_blocked(X_kv, W_V_head, V, L_enc, d_k, d_model);
+
+    // --- 2. Scores = Q * K^T ---
+    // (L_dec x d_k) * (d_k x L_enc) = (L_dec x L_enc)
+    float *scores = calloc(L_dec * L_enc, sizeof(float));
+    float *K_T = calloc(d_k * L_enc, sizeof(float));
+
+    transpose_matrix(K, K_T, L_enc, d_k);
+    matmul_blocked(Q, K_T, scores, L_dec, L_enc, d_k);
+    free(K_T);
+
+    // --- 3. Scale ---
+    scale_scores(scores, L_dec * L_enc,
+                 d_k); // Pass total size to scale function
+
+    // --- 4. Masking ---
+    // CRITICAL: Cross-Attention usually does NOT mask (encoder is fully
+    // visible). So we skip apply_mask() here unless you specifically want
+    // causal cross-attn (rare).
+
+    // --- 5. Softmax ---
+    // Apply softmax row-wise (over the Encoder length L_enc)
+    float *weights = calloc(L_dec * L_enc, sizeof(float));
+    softmax_rows(scores, weights,
+                 L_dec); // NOTE: Check your softmax impl to ensure it knows row
+                         // length is L_enc!
+    // If your softmax_rows assumes LxL square, you might need to update it to
+    // take (rows, cols). For now assuming L_dec == L_enc or softmax logic
+    // handles rows correctly.
+
+    // --- 6. Weighted Sum ---
+    // Out = Weights * V
+    // (L_dec x L_enc) * (L_enc x d_k) = (L_dec x d_k)
+    float *head_out = all_heads + h * L_dec * d_k;
+    matmul_blocked(weights, V, head_out, L_dec, d_k, L_enc);
+
+    // Cleanup temp buffers
+    free(Q);
+    free(K);
+    free(V);
+    free(scores);
+    free(weights);
+  }
+
+  // --- 7. Final Projection (W_o) ---
+  // Out = ConcatHeads * W_o
+  matmul_blocked(all_heads, params->W_o, out, L_dec, d_model, d_model);
+
+  free(all_heads);
+}
