@@ -14,14 +14,16 @@ void compute_decode_layer(const float *dec_input, const float *enc_output,
 
   // helper buffer
   size_t buf_size = L_dec * d_model * sizeof(float);
-  float *A1 = (float *)calloc(L_dec * sizeof(float)); // self attn out
-  float *Y1 = (float *)calloc(L_dec * sizeof(float)); // post ln1
-  float *A2 = (float *)calloc(L_dec * sizeof(float)); // cross attn out
-  float *Y2 = (float *)calloc(L_dec * sizeof(float)); // post ln2
-  float *FF = (float *)calloc(L_dec * sizeof(float)); // ffn output
+  float *A1 = (float *)calloc(L_dec, sizeof(float)); // self attn out
+  float *Y1 = (float *)calloc(L_dec, sizeof(float)); // post ln1
+  float *A2 = (float *)calloc(L_dec, sizeof(float)); // cross attn out
+  float *Y2 = (float *)calloc(L_dec, sizeof(float)); // post ln2
+  float *FF = (float *)calloc(L_dec, sizeof(float)); // ffn output
 
-  if (!A1 || !Y1 || !A2 || !Y2 || !FF)
-    fprintf(stderr, "Alloc failed in decoder\n", exit(1));
+  if (!A1 || !Y1 || !A2 || !Y2 || !FF) {
+    fprintf(stderr, "Alloc failed in decoder\n");
+    exit(1);
+  }
 
   // Mask Self_attention
   compute_multihead_attention(dec_input, &params->self_attn_params, A1, L_dec,

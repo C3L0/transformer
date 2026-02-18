@@ -149,8 +149,9 @@ void init_encoder_params(EncoderParams *params, int d_model, int d_ff,
 void free_encoder_params(EncoderParams *params) {
   if (!params)
     return;
-  free(&(params->attn_params));
-  free(&(params->ln1_params));
-  free(&(params->ffn_params));
-  free(&(params->ln2_params));
+
+  free_attention_params(&(params->attn_params));
+  free_layernorm_params(&(params->ln1_params));
+  free_feedforward_params(&(params->ffn_params));
+  free_layernorm_params(&(params->ln2_params));
 }

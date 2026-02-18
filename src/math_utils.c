@@ -3,21 +3,54 @@
 
 #include <math.h>
 
-void softmax_rows(const float *scores, float *weights, int L) {
-  for (int i = 0; i < L; i++) {
-    float max_val = -INFINITY, sum = 0.0f;
-    for (int j = 0; j < L; j++) {
-      float val = scores[i * L + j];
-      if (val > max_val)
-        max_val = val;
+// void softmax_rows(const float *scores, float *weights, int L) {
+//   for (int i = 0; i < L; i++) {
+//     float max_val = -INFINITY, sum = 0.0f;
+//     for (int j = 0; j < L; j++) {
+//       float val = scores[i * L + j];
+//       if (val > max_val)
+//         max_val = val;
+//     }
+//     for (int j = 0; j < L; j++) {
+//       float e = expf(scores[i * L + j] - max_val);
+//       weights[i * L + j] = e;
+//       sum += e;
+//     }
+//     for (int j = 0; j < L; j++)
+//       weights[i * L + j] /= sum;
+//   }
+// }
+
+// void scale_scores(float *scores, int total_elements, int d_k) {
+//   float scale = 1.0f / sqrtf((float)d_k);
+//   for (int i = 0; i < total_elements; i++) {
+//     scores[i] *= scale;
+//   }
+// }
+
+void softmax_rows(const float *scores, float *weights, int rows, int cols) {
+  for (int i = 0; i < rows; i++) {
+    const float *row_in = scores + (i * cols);
+    float *row_out = weights + (i * cols);
+
+    // Find max for numerical stability
+    float max_val = -INFINITY;
+    for (int j = 0; j < cols; j++) {
+      if (row_in[j] > max_val)
+        max_val = row_in[j];
     }
-    for (int j = 0; j < L; j++) {
-      float e = expf(scores[i * L + j] - max_val);
-      weights[i * L + j] = e;
-      sum += e;
+
+    // Compute exp and sum
+    float sum = 0.0f;
+    for (int j = 0; j < cols; j++) {
+      row_out[j] = expf(row_in[j] - max_val);
+      sum += row_out[j];
     }
-    for (int j = 0; j < L; j++)
-      weights[i * L + j] /= sum;
+
+    // Normalize
+    for (int j = 0; j < cols; j++) {
+      row_out[j] /= (sum + EPSILON);
+    }
   }
 }
 

@@ -194,6 +194,77 @@ static void test_multihead_attention() {
   free(expected_output);
 }
 
+void init_test_cross_attn_params(AttentionParams *params, int d_model,
+                                 int num_heads) {
+  int d_k = d_model / num_heads;
+
+  // Total W_qkv size: num_heads * 3 (Q,K,V) * d_model (rows) * d_k (cols)
+  // Note: In memory, d_model * d_k is the block size.
+  size_t size_qkv = num_heads * 3 * d_model * d_k;
+  params->W_qkv = (float *)malloc(size_qkv * sizeof(float));
+
+  for (size_t i = 0; i < size_qkv; i++) {
+    params->W_qkv[i] = (float)i * 0.01f;
+  }
+
+  // W_o: Identity matrix * 0.1 (to keep numbers small/clean)
+  params->W_o = (float *)calloc(d_model * d_model, sizeof(float));
+  for (int i = 0; i < d_model; i++) {
+    params->W_o[i * d_model + i] = 0.1f;
+  }
+}
+
+void test_compute_cross_attention() {
+  printf("Testing compute_cross_attention\n");
+
+  // Dimensions
+  int L_dec = 2; // Query length
+  int L_enc = 3; // Key/Value length
+  int d_model = 4;
+  int num_heads = 2;
+
+  // 1. Inputs
+  // Decoder Input (Queries):
+  float X_q[] = {1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f};
+
+  // Encoder Output (Keys/Values):
+  float X_kv[] = {2.0f, 2.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                  2.0f, 2.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+
+  // 2. Params
+  AttentionParams params;
+  init_test_cross_attn_params(&params, d_model, num_heads);
+
+  // 3. Output Buffer
+  float *out = (float *)calloc(L_dec * d_model, sizeof(float));
+
+  // 4. Run Function
+  // Ensure your attention.h has the prototype for this!
+  compute_cross_attention(X_q, X_kv, &params, out, L_dec, L_enc, d_model,
+                          num_heads);
+
+  // 5. Expected Output
+  float expected[] = {0.061618f, 0.063418f, 0.119054f, 0.122654f,
+                      0.066060f, 0.067860f, 0.133276f, 0.136876f};
+
+  // 6. Verify
+  if (compare(out, expected, L_dec * d_model)) {
+    // Assuming your compare function uses an epsilon (~1e-5)
+    printf("\tPASSED\n");
+  } else {
+    printf("\tFAILED\n");
+    printf("\tGot: ");
+    for (int i = 0; i < L_dec * d_model; i++)
+      printf("%.6f ", out[i]);
+    printf("\n");
+  }
+
+  // Cleanup
+  free(params.W_qkv);
+  free(params.W_o);
+  free(out);
+}
+
 int main() {
   // return 0 & 1 for the tests
   printf("===== Running utils unit tests =====\n");
@@ -201,6 +272,7 @@ int main() {
   test_apply_mask();
   test_attention_basic();
   test_multihead_attention();
+  test_compute_cross_attention();
   printf("===== All tests complete =====\n");
   return 0;
 }

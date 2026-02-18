@@ -20,6 +20,6 @@ void compute_multihead_attention(const float *X, const AttentionParams *params,
 
 void compute_cross_attention(const float *X_q, const float *X_kv,
                              const AttentionParams *params, float *out,
-                             int L_dec, int L_enc, int d_model, int num_heads)
+                             int L_dec, int L_enc, int d_model, int num_heads);
 
 #endif

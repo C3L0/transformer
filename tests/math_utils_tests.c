@@ -14,7 +14,7 @@ static void test_softmax_rows() {
   float weights[4];
   int L = 2;
 
-  softmax_rows(scores, weights, L);
+  softmax_rows(scores, weights, L, L);
 
   printf("Testing softmax_rows:\n\t");
   if (compare(weights, ref, 4))
