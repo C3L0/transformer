@@ -7,18 +7,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void compute_decode_layer(const float *dec_input, const float *enc_output,
+void compute_decoder_layer(const float *dec_input, const float *enc_output,
                           const DecoderLayerParams *params, float *dec_output,
                           int L_dec, int L_enc, int d_model, int d_ff,
                           int num_heads) {
 
   // helper buffer
-  size_t buf_size = L_dec * d_model * sizeof(float);
-  float *A1 = (float *)calloc(L_dec, sizeof(float)); // self attn out
-  float *Y1 = (float *)calloc(L_dec, sizeof(float)); // post ln1
-  float *A2 = (float *)calloc(L_dec, sizeof(float)); // cross attn out
-  float *Y2 = (float *)calloc(L_dec, sizeof(float)); // post ln2
-  float *FF = (float *)calloc(L_dec, sizeof(float)); // ffn output
+  float *A1 = (float *)calloc(L_dec * d_model, sizeof(float)); // self attn out
+  float *Y1 = (float *)calloc(L_dec * d_model, sizeof(float)); // post ln1
+  float *A2 = (float *)calloc(L_dec * d_model, sizeof(float)); // cross attn out
+  float *Y2 = (float *)calloc(L_dec * d_model, sizeof(float)); // post ln2
+  float *FF = (float *)calloc(L_dec * d_model, sizeof(float)); // ffn output
 
   if (!A1 || !Y1 || !A2 || !Y2 || !FF) {
     fprintf(stderr, "Alloc failed in decoder\n");
@@ -31,7 +30,7 @@ void compute_decode_layer(const float *dec_input, const float *enc_output,
 
   // add & norm
   matsum(dec_input, A1, A1, L_dec * d_model);
-  compute_layernorm(A2, &params->ln1_params, Y1, L_dec, d_model);
+  compute_layernorm(A1, &params->ln1_params, Y1, L_dec, d_model);
 
   // Cross Attention
   compute_cross_attention(Y1, enc_output, &params->cross_attn_params, A2, L_dec,

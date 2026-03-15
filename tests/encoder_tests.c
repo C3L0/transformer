@@ -31,7 +31,7 @@ void test_init_weight_sequential(float *W, size_t size) {
 }
 
 // Function to initialize ALL parameters deterministically for testing
-void init_test_encoder_params(EncoderParams *params, int d_model, int d_ff,
+void init_test_encoder_params(EncoderLayerParams *params, int d_model, int d_ff,
                               int num_heads) {
   // Reset counter for fresh, deterministic run
   test_init_counter = 0.01f;
@@ -78,7 +78,7 @@ static void test_encoder_layer_forward() {
   const int TOTAL_SIZE = 8; // L * D_MODEL
 
   // --- 1. Allocate & Initialize Layer Parameters ---
-  EncoderParams params;
+  EncoderLayerParams params;
   init_test_encoder_params(&params, D_MODEL, D_FF, NUM_HEADS);
 
   // --- 2. Allocate Input and Output Buffers ---

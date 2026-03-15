@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void compute_encoder_layer(const float *X, const EncoderParams *params,
+void compute_encoder_layer(const float *X, const EncoderLayerParams *params,
                            float *out, int L, int d_model, int d_ff,
                            int num_heads) {
 

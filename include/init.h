@@ -3,6 +3,7 @@
 #define INIT_H
 
 #include "attention.h"
+#include "decoder.h"
 #include "encoder.h"
 #include "feedforward.h"
 #include "layernorm.h"
@@ -22,9 +23,14 @@ void init_feedforward_params(FeedForwardParams *params, int d_model, int d_ff);
 
 void free_feedforward_params(FeedForwardParams *params);
 
-void init_encoder_params(EncoderParams *params, int d_model, int d_ff,
+void init_encoder_params(EncoderLayerParams *params, int d_model, int d_ff,
                          int num_heads, int random_init);
 
-void free_encoder_params(EncoderParams *params);
+void free_encoder_params(EncoderLayerParams *params);
+
+void init_decoder_layer_params(DecoderLayerParams *params, int d_model,
+                               int d_ff, int num_heads, int random_init);
+
+void free_decoder_layer_params(DecoderLayerParams *params);
 
 #endif

@@ -1,4 +1,5 @@
 #include "../include/init.h"
+#include "../include/transformer.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -6,7 +7,7 @@
 #include <string.h>
 
 void fill_random(float *M, int N) {
-  for (int i = 0; i < N * N; i++)
+  for (int i = 0; i < N; i++)
     M[i] = (float)rand() / RAND_MAX;
 }
 
@@ -125,7 +126,7 @@ void free_feedforward_params(FeedForwardParams *params) {
   params->W1 = params->W2 = params->B1 = params->B2 = NULL;
 }
 
-void init_encoder_params(EncoderParams *params, int d_model, int d_ff,
+void init_encoder_params(EncoderLayerParams *params, int d_model, int d_ff,
                          int num_heads, int random_init) {
   if (!params) {
     fprintf(stderr, "Error: NULL pointer passed in init_feedforward_params\n");
@@ -137,16 +138,9 @@ void init_encoder_params(EncoderParams *params, int d_model, int d_ff,
   init_layernorm_params(&(params->ln1_params), d_model);
   init_feedforward_params(&(params->ffn_params), d_model, d_ff);
   init_layernorm_params(&(params->ln2_params), d_model);
-
-  if (!&(params->attn_params) || !&(params->ln1_params) ||
-      !&(params->ffn_params) || !&(params->ln2_params)) {
-    fprintf(stderr, "Memory allocation failed for EncoderParams");
-    free_encoder_params(params);
-    exit(1);
-  }
 }
 
-void free_encoder_params(EncoderParams *params) {
+void free_encoder_params(EncoderLayerParams *params) {
   if (!params)
     return;
 
@@ -154,4 +148,84 @@ void free_encoder_params(EncoderParams *params) {
   free_layernorm_params(&(params->ln1_params));
   free_feedforward_params(&(params->ffn_params));
   free_layernorm_params(&(params->ln2_params));
+}
+
+void init_decoder_layer_params(DecoderLayerParams *params, int d_model,
+                               int d_ff, int num_heads, int random_init) {
+  if (!params) {
+    fprintf(stderr, "Error: NULL pointer passed in init_decoder_layer_params\n");
+    exit(1);
+  }
+
+  init_attention_params(&(params->self_attn_params), d_model, num_heads,
+                        random_init);
+  init_layernorm_params(&(params->ln1_params), d_model);
+  init_attention_params(&(params->cross_attn_params), d_model, num_heads,
+                        random_init);
+  init_layernorm_params(&(params->ln2_params), d_model);
+  init_feedforward_params(&(params->ffn_params), d_model, d_ff);
+  init_layernorm_params(&(params->ln3_params), d_model);
+}
+
+void free_decoder_layer_params(DecoderLayerParams *params) {
+  if (!params)
+    return;
+
+  free_attention_params(&(params->self_attn_params));
+  free_layernorm_params(&(params->ln1_params));
+  free_attention_params(&(params->cross_attn_params));
+  free_layernorm_params(&(params->ln2_params));
+  free_feedforward_params(&(params->ffn_params));
+  free_layernorm_params(&(params->ln3_params));
+}
+
+void init_transformer_params(TransformerParams *params,
+                             TransformerConfig config) {
+  params->config = config;
+
+  // 1. Embeddings
+  params->token_embedding =
+      (float *)malloc(config.vocab_size * config.d_model * sizeof(float));
+  params->pos_encoding =
+      (float *)malloc(config.max_seq_len * config.d_model * sizeof(float));
+
+  fill_random(params->token_embedding, config.vocab_size * config.d_model);
+  fill_random(params->pos_encoding, config.max_seq_len * config.d_model);
+
+  // 2. Encoder Layers
+  params->encoder_layers = (EncoderLayerParams *)malloc(
+      config.num_layers * sizeof(EncoderLayerParams));
+  for (int i = 0; i < config.num_layers; i++) {
+    init_encoder_params(&params->encoder_layers[i], config.d_model, config.d_ff,
+                        config.num_heads, 1);
+  }
+
+  // 3. Decoder Layers
+  params->decoder_layers = (DecoderLayerParams *)malloc(
+      config.num_layers * sizeof(DecoderLayerParams));
+  for (int i = 0; i < config.num_layers; i++) {
+    init_decoder_layer_params(&params->decoder_layers[i], config.d_model,
+                               config.d_ff, config.num_heads, 1);
+  }
+
+  // 4. Output Projection
+  params->output_projection =
+      (float *)malloc(config.d_model * config.vocab_size * sizeof(float));
+  fill_random(params->output_projection, config.d_model * config.vocab_size);
+}
+
+void free_transformer_params(TransformerParams *params) {
+  if (!params)
+    return;
+
+  free(params->token_embedding);
+  free(params->pos_encoding);
+
+  for (int i = 0; i < params->config.num_layers; i++) {
+    free_encoder_params(&params->encoder_layers[i]);
+    free_decoder_layer_params(&params->decoder_layers[i]);
+  }
+  free(params->encoder_layers);
+  free(params->decoder_layers);
+  free(params->output_projection);
 }

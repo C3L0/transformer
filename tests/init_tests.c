@@ -38,9 +38,9 @@ int main() {
   free_feedforward_params(&ff);
   printf("FeedForwardParams test complete\n\n");
 
-  // --- EncoderParams Test ---
-  printf("Testing EncoderParams initialization\n");
-  EncoderParams encode;
+  // --- EncoderLayerParams Test ---
+  printf("Testing EncoderLayerParams initialization\n");
+  EncoderLayerParams encode;
   init_encoder_params(&encode, 4, 8, 2, 1);
   // print_mat("AttentionParams", encode. , , );
   // print_mat("LayerNormParams", encode. , , );
