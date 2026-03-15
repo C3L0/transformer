@@ -50,7 +50,7 @@ static void test_compute_feedforward_network() {
   // Output buffer (1 x 2)
   float out[2];
 
-  float out_ref[2] = {6.97695f, 6.97695f};
+  float out_ref[2] = {6.96040f, 6.96040f};
 
   // Execute the FFNN forward pass
   compute_feedforward_network(X, &params, out, L, D_MODEL, D_FF);

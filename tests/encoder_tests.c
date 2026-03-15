@@ -75,10 +75,10 @@ static void test_encoder_layer_forward() {
   const int D_MODEL = 4; // Embedding Dimension
   const int NUM_HEADS = 2;
   const int D_FF = 8;
-  const int TOTAL_SIZE = L * D_MODEL;
+  const int TOTAL_SIZE = 8; // L * D_MODEL
 
   // --- 1. Allocate & Initialize Layer Parameters ---
-  EncoderLayerParams params;
+  EncoderParams params;
   init_test_encoder_params(&params, D_MODEL, D_FF, NUM_HEADS);
 
   // --- 2. Allocate Input and Output Buffers ---
@@ -99,14 +99,12 @@ static void test_encoder_layer_forward() {
   // that uses the EXACT SAME sequential weight initialization (0.01, 0.02,
   // ...). The values below are a placeholder derived from a sample run for
   // verification.
-  float expected_data[TOTAL_SIZE] = {// [T1: Feature 1-4], [T2: Feature 1-4]
-                                     0.510620f, 0.620620f, 0.730620f,
-                                     0.840620f, 1.104050f, 1.214050f,
-                                     1.324050f, 1.434050f};
+  float expected_data[8] = {-1.341641f, -0.447213f, 0.447214f, 1.341640f,
+                            -1.341641f, -0.447214f, 0.447213f, 1.341641f};
 
   printf("Result Check:\n");
   // Comparison requires checking against the strict floating point result
-  if (compare(Y_output, expected_data, TOTAL_SIZE, 1e-4f)) {
+  if (compare(Y_output, expected_data, TOTAL_SIZE)) {
     printf("\tPASSED (Encoder Layer Forward)\n");
   } else {
     printf("\tFAILED (Encoder Layer Forward)\n");

@@ -9,16 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-void scale_scores(float *scores, int L, int d_k) {
-  float scale = 1.0f / sqrtf((float)d_k);
-  for (int i = 0; i < L * L; i++)
-    scores[i] *= scale;
-}
-
-void apply_mask(float *scores, const float *mask, int L) {
+void apply_mask(float *scores, const float *mask, int rows, int cols) {
   if (!mask)
     return;
-  for (int i = 0; i < L * L; i++)
+  for (int i = 0; i < rows * cols; i++)
     if (mask[i] == 0.0)
       scores[i] = -INFINITY;
 }
@@ -60,12 +54,12 @@ void compute_attention_gemm(const float *X, const float *W_qkv, float *Q,
 
 #endif
   //--4-- Scale scores
-  scale_scores(scores, L, d_k);
+  scale_scores(scores, L * L, d_k);
 
   // --5-- Mask application
   float *mask = calloc(L * L, sizeof(float));
   mattri_low(mask, L);
-  apply_mask(scores, mask, L);
+  apply_mask(scores, mask, L, L);
   free(mask);
 
   //--6-- Compute the softmax
@@ -104,8 +98,7 @@ void compute_multihead_attention(const float *X, const AttentionParams *params,
              (3 * d_k) * sizeof(float));
     }
 
-    float *head_out = all_heads + h * L * d_k;
-    // Temporary buffers for single-head computation
+    float *head_tmp = calloc(L * d_k, sizeof(float));
     float *Q = calloc(L * d_k, sizeof(float));
     float *K = calloc(L * d_k, sizeof(float));
     float *V = calloc(L * d_k, sizeof(float));
@@ -113,8 +106,14 @@ void compute_multihead_attention(const float *X, const AttentionParams *params,
     float *weights = calloc(L * L, sizeof(float));
 
     // -- 3 -- Compute single-head attention
-    compute_attention_gemm(X, W_head, Q, K, V, scores, weights, head_out, L,
+    compute_attention_gemm(X, W_head, Q, K, V, scores, weights, head_tmp, L,
                            d_model, d_k);
+
+    // -- 4 -- Interleave head output into all_heads
+    for (int i = 0; i < L; i++) {
+      memcpy(all_heads + i * d_model + h * d_k, head_tmp + i * d_k,
+             d_k * sizeof(float));
+    }
 
     free(W_head);
     free(Q);
@@ -122,9 +121,8 @@ void compute_multihead_attention(const float *X, const AttentionParams *params,
     free(V);
     free(scores);
     free(weights);
+    free(head_tmp);
   }
-
-  // -- 4 -- Concatenation is implicit in how 'all_heads' buffer was populated
 
   // -- 5 -- Apply the final output projection
   // = all_heads × W_o (L x d_model) * (d_model x d_model) = (L x d_model)
@@ -167,11 +165,22 @@ void compute_cross_attention(const float *X_q, const float *X_kv,
     return;
 
   for (int h = 0; h < num_heads; h++) {
-    // Weight Slicing
-    const float *W_head_start = params->W_qkv + (h * 3 * d_model * d_k);
-    const float *W_Q = W_head_start;
-    const float *W_K = W_head_start + (d_model * d_k);
-    const float *W_V = W_head_start + (2 * d_model * d_k);
+    // Weight Slicing: Interleaved layout [H0_Q, H0_K, H0_V, H1_Q, ...]
+    // W_Q, W_K, W_V are each (d_model x d_k)
+    float *W_Q = (float *)malloc(d_model * d_k * sizeof(float));
+    float *W_K = (float *)malloc(d_model * d_k * sizeof(float));
+    float *W_V = (float *)malloc(d_model * d_k * sizeof(float));
+
+    for (int i = 0; i < d_model; i++) {
+      memcpy(W_Q + i * d_k, params->W_qkv + i * (3 * d_model) + h * (3 * d_k),
+             d_k * sizeof(float));
+      memcpy(W_K + i * d_k,
+             params->W_qkv + i * (3 * d_model) + h * (3 * d_k) + d_k,
+             d_k * sizeof(float));
+      memcpy(W_V + i * d_k,
+             params->W_qkv + i * (3 * d_model) + h * (3 * d_k) + 2 * d_k,
+             d_k * sizeof(float));
+    }
 
     // 1. Q, K, V Projection
     float *Q = (float *)calloc(L_dec * d_k, sizeof(float));
@@ -186,8 +195,6 @@ void compute_cross_attention(const float *X_q, const float *X_kv,
     float *scores = (float *)calloc(L_dec * L_enc, sizeof(float));
 
 #ifdef USE_OPENBLAS
-    // BLAS Optimization: Use CblasTrans for the B matrix to avoid manual
-    // transpose
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, L_dec, L_enc, d_k,
                 1.0f, Q, d_k, K, d_k, 0.0f, scores, L_enc);
 #else
@@ -202,14 +209,24 @@ void compute_cross_attention(const float *X_q, const float *X_kv,
     softmax_rows(scores, scores, L_dec, L_enc);
 
     // 4. Weighted Sum: Out = Weights * V
-    float *head_out = all_heads + (h * L_dec * d_k);
-    matmul_safe(scores, V, head_out, L_dec, d_k, L_enc);
+    float *head_tmp = (float *)calloc(L_dec * d_k, sizeof(float));
+    matmul_safe(scores, V, head_tmp, L_dec, d_k, L_enc);
+
+    // Interleave head output into all_heads
+    for (int i = 0; i < L_dec; i++) {
+      memcpy(all_heads + i * d_model + h * d_k, head_tmp + i * d_k,
+             d_k * sizeof(float));
+    }
 
     // Cleanup per head
+    free(W_Q);
+    free(W_K);
+    free(W_V);
     free(Q);
     free(K);
     free(V);
     free(scores);
+    free(head_tmp);
   }
 
   // 5. Final Projection (W_o)

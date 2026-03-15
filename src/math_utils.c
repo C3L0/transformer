@@ -3,31 +3,6 @@
 
 #include <math.h>
 
-// void softmax_rows(const float *scores, float *weights, int L) {
-//   for (int i = 0; i < L; i++) {
-//     float max_val = -INFINITY, sum = 0.0f;
-//     for (int j = 0; j < L; j++) {
-//       float val = scores[i * L + j];
-//       if (val > max_val)
-//         max_val = val;
-//     }
-//     for (int j = 0; j < L; j++) {
-//       float e = expf(scores[i * L + j] - max_val);
-//       weights[i * L + j] = e;
-//       sum += e;
-//     }
-//     for (int j = 0; j < L; j++)
-//       weights[i * L + j] /= sum;
-//   }
-// }
-
-// void scale_scores(float *scores, int total_elements, int d_k) {
-//   float scale = 1.0f / sqrtf((float)d_k);
-//   for (int i = 0; i < total_elements; i++) {
-//     scores[i] *= scale;
-//   }
-// }
-
 void softmax_rows(const float *scores, float *weights, int rows, int cols) {
   for (int i = 0; i < rows; i++) {
     const float *row_in = scores + (i * cols);
@@ -51,6 +26,13 @@ void softmax_rows(const float *scores, float *weights, int rows, int cols) {
     for (int j = 0; j < cols; j++) {
       row_out[j] /= (sum + EPSILON);
     }
+  }
+}
+
+void scale_scores(float *scores, int total_elements, int d_k) {
+  float scale = 1.0f / sqrtf((float)d_k);
+  for (int i = 0; i < total_elements; i++) {
+    scores[i] *= scale;
   }
 }
 

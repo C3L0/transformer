@@ -13,11 +13,11 @@
 
 static void test_scale_scores() {
   float scores[4] = {1.0, 2.0, 3.0, 4.0};
-  int L = 2, d_k = 4;
+  int d_k = 4;
 
   float ref[4] = {0.5, 1.0, 1.5, 2.0};
 
-  scale_scores(scores, L, d_k);
+  scale_scores(scores, 4, d_k);
 
   printf("Testing scale_scores:\n\t");
   if (compare(scores, ref, 4))
@@ -29,11 +29,10 @@ static void test_scale_scores() {
 static void test_apply_mask() {
   float scores[4] = {1.0, 2.0, 3.0, 4.0};
   float mask[4] = {1.0, 0.0, 1.0, 0.0};
-  int L = 2;
 
   float ref[4] = {1.0, -INFINITY, 3.0, -INFINITY};
 
-  apply_mask(scores, mask, L);
+  apply_mask(scores, mask, 2, 2);
 
   printf("Testing apply_mask:\n\t");
   if (compare(scores, ref, 4))
@@ -152,10 +151,8 @@ static void test_multihead_attention() {
   // 2. Output Reference Data (Precise values needed for this test scenario)
   // Recalculated reference for the identity W_o and sequential W_qkv weights:
   float expected_data[8] = {
-      // These values are derived from a reference calculation
-      // QKV Projection -> Scaling -> Softmax -> Matmul V -> Final Projection
-      2.900000f, 3.000000f, 6.580000f, 6.840000f,
-      3.500000f, 3.600000f, 8.140000f, 8.400000f};
+      2.900000f, 3.000000f, 3.500000f, 3.600000f,
+      6.580000f, 6.840000f, 8.140000f, 8.400000f};
 
   // 3. Dynamic Allocation and Initialization
   float *X = (float *)calloc(TOTAL_SIZE, sizeof(float));
@@ -197,17 +194,14 @@ static void test_multihead_attention() {
 void init_test_cross_attn_params(AttentionParams *params, int d_model,
                                  int num_heads) {
   int d_k = d_model / num_heads;
-
-  // Total W_qkv size: num_heads * 3 (Q,K,V) * d_model (rows) * d_k (cols)
-  // Note: In memory, d_model * d_k is the block size.
-  size_t size_qkv = num_heads * 3 * d_model * d_k;
+  size_t size_qkv = d_model * 3 * d_model;
   params->W_qkv = (float *)malloc(size_qkv * sizeof(float));
 
   for (size_t i = 0; i < size_qkv; i++) {
     params->W_qkv[i] = (float)i * 0.01f;
   }
 
-  // W_o: Identity matrix * 0.1 (to keep numbers small/clean)
+  // W_o: Identity matrix * 0.1
   params->W_o = (float *)calloc(d_model * d_model, sizeof(float));
   for (int i = 0; i < d_model; i++) {
     params->W_o[i * d_model + i] = 0.1f;
@@ -239,14 +233,14 @@ void test_compute_cross_attention() {
   float *out = (float *)calloc(L_dec * d_model, sizeof(float));
 
   // 4. Run Function
-  // Ensure your attention.h has the prototype for this!
   compute_cross_attention(X_q, X_kv, &params, out, L_dec, L_enc, d_model,
                           num_heads);
 
-  // 5. Expected Output
-  float expected[] = {0.061618f, 0.063418f, 0.119054f, 0.122654f,
-                      0.066060f, 0.067860f, 0.133276f, 0.136876f};
+  // 5. Expected Output (based on the fixed interleaved layout)
+  float expected[] = {0.093404f, 0.097404f, 0.119953f, 0.123953f,
+                      0.098452f, 0.102452f, 0.124885f, 0.128885f};
 
+  print_mat("out", out, 8, 8);
   // 6. Verify
   if (compare(out, expected, L_dec * d_model)) {
     // Assuming your compare function uses an epsilon (~1e-5)
